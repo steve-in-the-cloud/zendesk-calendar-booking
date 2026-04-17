@@ -1,0 +1,250 @@
+.admin-panel {
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.admin-header {
+  background: white;
+  padding: 20px 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.admin-header h1 {
+  color: #1f2937;
+  font-size: 24px;
+}
+
+.admin-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.admin-section {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.admin-section h2 {
+  color: #1f2937;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.connection-status {
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.connection-status.disconnected {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.connection-status.connected {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.calendar-selector {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.calendar-selector label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.calendar-selector select {
+  max-width: 400px;
+}
+
+.booking-form {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.booking-types-list {
+  display: grid;
+  gap: 20px;
+}
+
+.booking-type-card {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.booking-type-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.color-indicator {
+  width: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.booking-type-info {
+  flex: 1;
+}
+
+.booking-type-info h3 {
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.booking-type-info .duration {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.booking-type-info .description {
+  color: #6b7280;
+  margin-bottom: 15px;
+}
+
+.url-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.url-section label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.url-display {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.url-display code {
+  flex: 1;
+  background: #f3f4f6;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.url-note {
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.booking-type-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-secondary {
+  background: white;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.btn-secondary:hover {
+  background: #eff6ff;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-copy {
+  background: #10b981;
+  color: white;
+  padding: 8px 16px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn-copy:hover {
+  background: #059669;
+}
+
+.no-items {
+  text-align: center;
+  color: #6b7280;
+  padding: 40px;
+}
+
+.instructions {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.instructions ol {
+  margin-left: 20px;
+}
+
+.instructions li {
+  margin-bottom: 15px;
+  line-height: 1.6;
+  color: #374151;
+}
+
+.instructions strong {
+  color: #1f2937;
+}
