@@ -1,7 +1,18 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-const dbPath = path.join(__dirname, '..', 'calendar_booking.db');
+// Use persistent disk in production, local path in development
+const dataDir = process.env.NODE_ENV === 'production'
+  ? '/opt/render/project/data'
+  : path.join(__dirname, '..');
+
+// Ensure directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const dbPath = path.join(dataDir, 'calendar_booking.db');
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
