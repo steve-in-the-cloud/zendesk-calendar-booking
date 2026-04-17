@@ -6,7 +6,9 @@
       "Bash(npm install:*)",
       "Bash(ngrok http:*)",
       "Bash(curl -s http://localhost:4040/api/tunnels)",
-      "Bash(pkill ngrok:*)"
+      "Bash(pkill ngrok:*)",
+      "Bash(gh repo:*)",
+      "Bash(open:*)"
     ]
   }
 }

@@ -54,7 +54,10 @@ function AdminPanel() {
   };
 
   const handleGoogleAuth = () => {
-    window.location.href = 'http://localhost:3001/auth/google';
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? window.location.origin
+      : 'http://localhost:3001';
+    window.location.href = `${baseUrl}/auth/google`;
   };
 
   const handleCalendarSelect = async (calendarId) => {
