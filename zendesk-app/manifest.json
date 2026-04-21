@@ -1,0 +1,27 @@
+{
+  "name": "Calendar Booking System",
+  "author": {
+    "name": "Your Company",
+    "email": "support@example.com"
+  },
+  "defaultLocale": "en",
+  "private": true,
+  "location": {
+    "support": {
+      "ticket_sidebar": {
+        "url": "assets/index.html",
+        "flexible": true
+      }
+    }
+  },
+  "version": "1.0.0",
+  "frameworkVersion": "2.0",
+  "parameters": [
+    {
+      "name": "api_url",
+      "type": "text",
+      "required": true,
+      "default": "http://localhost:3001"
+    }
+  ]
+}

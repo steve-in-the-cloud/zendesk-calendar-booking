@@ -1,6 +1,6 @@
 # Zendesk Calendar Booking System
 
-A Google Calendar integration for Zendesk Messaging that allows end users to book appointments directly from a conversation.
+A Google Calendar integration for Zendesk that allows both end users and customer service agents to book appointments.
 
 ## Features
 
@@ -8,7 +8,9 @@ A Google Calendar integration for Zendesk Messaging that allows end users to boo
 - **Multiple Booking Types**: Create different appointment types with custom durations
 - **Smart Availability**: Automatically prevents bookings outside working hours and shows only available slots
 - **Zendesk Integration**: Posts booking confirmations directly into Zendesk conversations
-- **Conversation Extension Ready**: Designed to work as a Zendesk Messaging Conversation Extension
+- **Dual Interface**:
+  - **Web Widget**: Conversation Extension for end users to self-book
+  - **Zendesk App**: Ticket sidebar app for agents to book on behalf of customers
 - **URL Parameters**: Pass booking type and conversation ID via URL for seamless integration
 
 ## Architecture
@@ -128,7 +130,11 @@ npm start
 
 ## Zendesk Integration
 
-### Setting Up as a Conversation Extension
+This system provides two integration options:
+
+### Option 1: Web Widget (Conversation Extension)
+
+For end users to self-book appointments from Zendesk Messaging:
 
 1. In Zendesk Admin Center, go to Messaging > Conversation Extensions
 2. Create a new extension
@@ -139,14 +145,40 @@ npm start
 4. Replace `{BOOKING_TYPE_ID}` with the actual ID from your admin panel
 5. The `{{ticket.id}}` will be automatically replaced by Zendesk with the conversation ID
 
-### Example URLs
-
-For each booking type, you'll get a URL like:
+Example URL:
 ```
 http://localhost:3000/?bookingTypeId=1&conversationId=CONVERSATION_ID
 ```
 
-The `conversationId` parameter should be set to Zendesk's conversation variable.
+### Option 2: Zendesk Ticket Sidebar App
+
+For agents to book appointments on behalf of customers:
+
+1. Package the app:
+   ```bash
+   cd zendesk-app
+   ./package-app.sh
+   ```
+
+2. Install in Zendesk:
+   - Go to Admin Center > Apps and integrations > Zendesk Support apps > Manage
+   - Click "Upload private app"
+   - Select `zendesk-calendar-app.zip`
+   - Click Upload
+
+3. Configure the app:
+   - Set **API Server URL** to your backend URL:
+     - Development: `http://localhost:3001`
+     - Production: Your deployed URL (e.g., `https://your-app.onrender.com`)
+   - Save settings
+
+4. Usage:
+   - Open any ticket in Zendesk Support
+   - Find "Calendar Booking System" in the right sidebar
+   - Select booking type, date, and time
+   - Click "Confirm Booking"
+
+See `zendesk-app/README.md` for detailed installation and usage instructions.
 
 ## API Endpoints
 
@@ -171,7 +203,9 @@ The `conversationId` parameter should be set to Zendesk's conversation variable.
 - `GET /api/availability` - Get available time slots
   - Query params: `start`, `end`, `duration`
 - `POST /api/bookings` - Create a booking
-  - Body: `{ bookingTypeId, conversationId, startTime, endTime }`
+  - Body: `{ bookingTypeId, conversationId?, ticketId?, startTime, endTime }`
+  - Use `conversationId` for web widget bookings
+  - Use `ticketId` for Zendesk app bookings
 - `GET /api/bookings` - List recent bookings
 
 ## Database Schema
@@ -186,7 +220,7 @@ The `conversationId` parameter should be set to Zendesk's conversation variable.
 
 ### bookings
 - Individual booking records
-- Links to booking type and conversation ID
+- Links to booking type with either conversation ID (web) or ticket ID (app)
 - Stores Google Calendar event ID
 
 ## Customization

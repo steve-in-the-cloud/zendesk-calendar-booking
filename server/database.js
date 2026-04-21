@@ -50,7 +50,8 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS bookings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       booking_type_id INTEGER,
-      conversation_id TEXT NOT NULL,
+      conversation_id TEXT,
+      ticket_id TEXT,
       start_time DATETIME NOT NULL,
       end_time DATETIME NOT NULL,
       customer_message TEXT,

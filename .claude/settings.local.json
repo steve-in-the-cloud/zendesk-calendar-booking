@@ -8,7 +8,11 @@
       "Bash(curl -s http://localhost:4040/api/tunnels)",
       "Bash(pkill ngrok:*)",
       "Bash(gh repo:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(grep -E \"\\\\.\\(html|js|json\\)$\")",
+      "Bash(chmod +x *)",
+      "Bash(./package-app.sh)",
+      "Bash(git add *)"
     ]
   }
 }

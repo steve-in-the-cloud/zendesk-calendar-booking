@@ -1,0 +1,12 @@
+{
+  "app": {
+    "name": "Calendar Booking System",
+    "description": "Book calendar appointments for customers",
+    "parameters": {
+      "api_url": {
+        "label": "API Server URL",
+        "helpText": "The URL of your booking API server (e.g., https://your-app.com)"
+      }
+    }
+  }
+}

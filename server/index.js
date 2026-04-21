@@ -11,7 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000'
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:3000',
+    /\.zendesk\.com$/,
+    /\.zdassets\.com$/,
+    /\.zdusercontent\.com$/
+  ]
 }));
 app.use(bodyParser.json());
 
@@ -172,9 +177,9 @@ app.get('/api/availability', async (req, res) => {
 // Booking endpoint
 app.post('/api/bookings', async (req, res) => {
   try {
-    const { bookingTypeId, conversationId, startTime, endTime, customerMessage } = req.body;
+    const { bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage } = req.body;
 
-    if (!bookingTypeId || !conversationId || !startTime || !endTime) {
+    if (!bookingTypeId || (!conversationId && !ticketId) || !startTime || !endTime) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -186,45 +191,57 @@ app.post('/api/bookings', async (req, res) => {
 
       try {
         // Create Google Calendar event
+        const sourceText = conversationId
+          ? `Zendesk conversation ${conversationId}`
+          : `Zendesk ticket ${ticketId}`;
+
         const googleEvent = await googleCalendar.createEvent({
           summary: `${bookingType.name} - Booking`,
-          description: customerMessage || `Booking from Zendesk conversation ${conversationId}`,
+          description: customerMessage || `Booking from ${sourceText}`,
           startTime,
           endTime
         });
 
         // Save booking to database
         db.run(
-          'INSERT INTO bookings (booking_type_id, conversation_id, start_time, end_time, customer_message, google_event_id) VALUES (?, ?, ?, ?, ?, ?)',
-          [bookingTypeId, conversationId, startTime, endTime, customerMessage, googleEvent.id],
+          'INSERT INTO bookings (booking_type_id, conversation_id, ticket_id, start_time, end_time, customer_message, google_event_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage, googleEvent.id],
           async function(err) {
             if (err) {
               return res.status(500).json({ error: err.message });
             }
 
-            // Send confirmation message to Zendesk conversation
-            try {
-              const message = zendeskService.formatBookingMessage({
-                bookingType: bookingType.name,
-                startTime,
-                endTime
-              });
+            // Send confirmation message to Zendesk conversation (only for web bookings)
+            if (conversationId) {
+              try {
+                const message = zendeskService.formatBookingMessage({
+                  bookingType: bookingType.name,
+                  startTime,
+                  endTime
+                });
 
-              await zendeskService.sendMessage(conversationId, message);
+                await zendeskService.sendMessage(conversationId, message);
 
+                res.json({
+                  id: this.lastID,
+                  googleEventId: googleEvent.id,
+                  success: true
+                });
+              } catch (zendeskError) {
+                console.error('Failed to send Zendesk message:', zendeskError);
+                res.json({
+                  id: this.lastID,
+                  googleEventId: googleEvent.id,
+                  success: true,
+                  warning: 'Booking created but failed to send confirmation message'
+                });
+              }
+            } else {
+              // Zendesk app booking - no conversation message needed
               res.json({
                 id: this.lastID,
                 googleEventId: googleEvent.id,
                 success: true
-              });
-            } catch (zendeskError) {
-              console.error('Failed to send Zendesk message:', zendeskError);
-              // Still return success for the booking, even if message failed
-              res.json({
-                id: this.lastID,
-                googleEventId: googleEvent.id,
-                success: true,
-                warning: 'Booking created but failed to send confirmation message'
               });
             }
           }
