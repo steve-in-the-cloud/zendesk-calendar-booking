@@ -179,13 +179,21 @@ app.post('/api/bookings', async (req, res) => {
   try {
     const { bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage } = req.body;
 
+    console.log('Booking request:', { bookingTypeId, conversationId, ticketId, startTime, endTime });
+
     if (!bookingTypeId || (!conversationId && !ticketId) || !startTime || !endTime) {
+      console.error('Missing required fields:', { bookingTypeId, conversationId, ticketId, startTime, endTime });
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Get booking type details
     db.get('SELECT * FROM booking_types WHERE id = ?', [bookingTypeId], async (err, bookingType) => {
-      if (err || !bookingType) {
+      if (err) {
+        console.error('Database error fetching booking type:', err);
+        return res.status(500).json({ error: 'Database error: ' + err.message });
+      }
+      if (!bookingType) {
+        console.error('Booking type not found:', bookingTypeId);
         return res.status(404).json({ error: 'Booking type not found' });
       }
 
@@ -203,12 +211,14 @@ app.post('/api/bookings', async (req, res) => {
         });
 
         // Save booking to database
+        console.log('Attempting to insert booking:', { bookingTypeId, conversationId, ticketId, googleEventId: googleEvent.id });
         db.run(
           'INSERT INTO bookings (booking_type_id, conversation_id, ticket_id, start_time, end_time, customer_message, google_event_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
           [bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage, googleEvent.id],
           async function(err) {
             if (err) {
-              return res.status(500).json({ error: err.message });
+              console.error('Database insert error:', err);
+              return res.status(500).json({ error: 'Database error: ' + err.message });
             }
 
             // Send confirmation message to Zendesk conversation (only for web bookings)
@@ -248,12 +258,12 @@ app.post('/api/bookings', async (req, res) => {
         );
       } catch (error) {
         console.error('Booking creation error:', error);
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: 'Booking creation failed: ' + error.message });
       }
     });
   } catch (error) {
-    console.error('Booking error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Booking endpoint error:', error);
+    res.status(500).json({ error: 'Server error: ' + error.message });
   }
 });
 
