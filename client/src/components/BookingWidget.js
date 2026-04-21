@@ -50,11 +50,13 @@ function BookingWidget() {
 
   const loadAvailability = async () => {
     try {
-      const startDate = new Date(selectedDate);
-      startDate.setHours(0, 0, 0, 0);
+      // Create UTC dates to avoid timezone issues
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth();
+      const day = selectedDate.getDate();
 
-      const endDate = new Date(selectedDate);
-      endDate.setHours(23, 59, 59, 999);
+      const startDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+      const endDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
 
       const response = await axios.get('/api/availability', {
         params: {

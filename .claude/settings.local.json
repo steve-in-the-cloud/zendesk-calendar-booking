@@ -14,7 +14,8 @@
       "Bash(./package-app.sh)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(curl -s \"https://1088037.apps.zdusercontent.com/1088037/assets/1732614836-406495b30f9161de269fe227f1cbfdd9/logo.png\" -o \"/Users/stephenujfalussyzendesk.com/Claude Date & Time Google Cal Selector/zendesk-app/assets/logo.png\")"
     ]
   }
 }

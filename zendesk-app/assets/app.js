@@ -53,11 +53,13 @@ const App = () => {
 
   const loadAvailability = async () => {
     try {
-      const startDate = new Date(selectedDate);
-      startDate.setHours(0, 0, 0, 0);
+      // Create UTC dates to avoid timezone issues
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth();
+      const day = selectedDate.getDate();
 
-      const endDate = new Date(selectedDate);
-      endDate.setHours(23, 59, 59, 999);
+      const startDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+      const endDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
 
       const response = await axios.get(`${apiUrl}/api/availability`, {
         params: {
@@ -100,16 +102,27 @@ const App = () => {
         endTime: selectedSlot.end
       });
 
-      setConfirmedBooking({
+      const bookingDetails = {
         bookingTypeName: selectedBookingType.name,
         startTime: selectedSlot.start,
         endTime: selectedSlot.end
-      });
+      };
+
+      setConfirmedBooking(bookingDetails);
       setSuccess(true);
       setSelectedSlot(null);
 
       if (client) {
+        // Show success notification
         client.invoke('notify', 'Booking confirmed successfully!', 'notice');
+
+        // Insert comment draft with booking details
+        const commentText = `Your ${bookingDetails.bookingTypeName} appointment has been scheduled:\n\n` +
+          `📅 Date: ${formatDate(new Date(bookingDetails.startTime))}\n` +
+          `🕐 Time: ${formatTime(bookingDetails.startTime)} - ${formatTime(bookingDetails.endTime)}\n\n` +
+          `A calendar invitation has been created for this appointment.`;
+
+        client.invoke('ticket.editor.insert', commentText);
       }
     } catch (err) {
       setError('Failed to create booking. Please try again.');
