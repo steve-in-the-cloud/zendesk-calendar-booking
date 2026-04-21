@@ -12,7 +12,9 @@
       "Bash(grep -E \"\\\\.\\(html|js|json\\)$\")",
       "Bash(chmod +x *)",
       "Bash(./package-app.sh)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

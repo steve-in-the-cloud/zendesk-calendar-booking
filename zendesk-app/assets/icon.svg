@@ -1,0 +1,38 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" rx="16" fill="#1F73B7"/>
+
+  <!-- Calendar body -->
+  <rect x="24" y="32" width="80" height="72" rx="4" fill="white"/>
+
+  <!-- Calendar header -->
+  <rect x="24" y="32" width="80" height="20" rx="4" fill="#03363D"/>
+  <rect x="24" y="36" width="80" height="16" fill="#03363D"/>
+
+  <!-- Binding rings -->
+  <circle cx="44" cy="28" r="3" fill="#68737D"/>
+  <circle cx="64" cy="28" r="3" fill="#68737D"/>
+  <circle cx="84" cy="28" r="3" fill="#68737D"/>
+
+  <!-- Calendar grid dots -->
+  <circle cx="36" cy="64" r="2.5" fill="#D8DCDE"/>
+  <circle cx="48" cy="64" r="2.5" fill="#D8DCDE"/>
+  <circle cx="60" cy="64" r="2.5" fill="#D8DCDE"/>
+  <circle cx="72" cy="64" r="2.5" fill="#D8DCDE"/>
+  <circle cx="84" cy="64" r="2.5" fill="#D8DCDE"/>
+  <circle cx="96" cy="64" r="2.5" fill="#D8DCDE"/>
+
+  <circle cx="36" cy="76" r="2.5" fill="#D8DCDE"/>
+  <circle cx="48" cy="76" r="2.5" fill="#D8DCDE"/>
+  <circle cx="60" cy="76" r="2.5" fill="#D8DCDE"/>
+  <circle cx="72" cy="76" r="2.5" fill="#1F73B7"/>
+  <circle cx="84" cy="76" r="2.5" fill="#D8DCDE"/>
+  <circle cx="96" cy="76" r="2.5" fill="#D8DCDE"/>
+
+  <circle cx="36" cy="88" r="2.5" fill="#D8DCDE"/>
+  <circle cx="48" cy="88" r="2.5" fill="#D8DCDE"/>
+  <circle cx="60" cy="88" r="2.5" fill="#D8DCDE"/>
+  <circle cx="72" cy="88" r="2.5" fill="#D8DCDE"/>
+  <circle cx="84" cy="88" r="2.5" fill="#D8DCDE"/>
+  <circle cx="96" cy="88" r="2.5" fill="#D8DCDE"/>
+</svg>

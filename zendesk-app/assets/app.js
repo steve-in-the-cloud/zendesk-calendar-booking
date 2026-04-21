@@ -1,5 +1,5 @@
 const { createElement: h, useState, useEffect } = React;
-const Calendar = window.Calendar;
+const Calendar = window.SimpleCalendar;
 
 const App = () => {
   const [client, setClient] = useState(null);
