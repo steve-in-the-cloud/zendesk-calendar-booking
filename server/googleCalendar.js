@@ -71,7 +71,7 @@ class GoogleCalendarService {
 
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
 
-    // Get events in the date range
+    // Get events from Google Calendar
     const response = await calendar.events.list({
       calendarId: calendarId,
       timeMin: startDate.toISOString(),
@@ -80,8 +80,31 @@ class GoogleCalendarService {
       orderBy: 'startTime'
     });
 
-    const events = response.data.items || [];
-    return this.calculateAvailableSlots(startDate, endDate, events, durationMinutes);
+    const calendarEvents = response.data.items || [];
+
+    // Get bookings from database in the same time range
+    const dbBookings = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT start_time, end_time FROM bookings
+         WHERE start_time < ? AND end_time > ?`,
+        [endDate.toISOString(), startDate.toISOString()],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+
+    // Convert database bookings to event format
+    const bookingEvents = dbBookings.map(booking => ({
+      start: { dateTime: booking.start_time },
+      end: { dateTime: booking.end_time }
+    }));
+
+    // Combine both calendar events and database bookings
+    const allBusySlots = [...calendarEvents, ...bookingEvents];
+
+    return this.calculateAvailableSlots(startDate, endDate, allBusySlots, durationMinutes);
   }
 
   calculateAvailableSlots(startDate, endDate, busyEvents, durationMinutes) {
