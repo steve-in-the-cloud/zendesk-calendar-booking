@@ -95,6 +95,13 @@ class GoogleCalendarService {
       );
     });
 
+    console.log('Availability check:', {
+      range: { start: startDate.toISOString(), end: endDate.toISOString() },
+      calendarEventsCount: calendarEvents.length,
+      dbBookingsCount: dbBookings.length,
+      dbBookings: dbBookings
+    });
+
     // Convert database bookings to event format
     const bookingEvents = dbBookings.map(booking => ({
       start: { dateTime: booking.start_time },
@@ -103,6 +110,8 @@ class GoogleCalendarService {
 
     // Combine both calendar events and database bookings
     const allBusySlots = [...calendarEvents, ...bookingEvents];
+
+    console.log('Total busy slots:', allBusySlots.length);
 
     return this.calculateAvailableSlots(startDate, endDate, allBusySlots, durationMinutes);
   }
