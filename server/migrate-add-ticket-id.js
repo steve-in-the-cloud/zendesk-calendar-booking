@@ -1,4 +1,4 @@
-// Migration script to add ticket_id column to existing production database
+// Migration script to add ticket_id column and make conversation_id nullable
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
@@ -19,7 +19,7 @@ if (!fs.existsSync(dbPath)) {
 const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
-  // Check if ticket_id column exists
+  // Check if migration is needed
   db.all("PRAGMA table_info(bookings)", (err, columns) => {
     if (err) {
       console.error('Error checking table schema:', err);
@@ -27,41 +27,92 @@ db.serialize(() => {
     }
 
     const hasTicketId = columns.some(col => col.name === 'ticket_id');
+    const conversationIdCol = columns.find(col => col.name === 'conversation_id');
+    const isConversationIdNullable = conversationIdCol && conversationIdCol.notnull === 0;
 
-    if (hasTicketId) {
-      console.log('✓ ticket_id column already exists');
+    if (hasTicketId && isConversationIdNullable) {
+      console.log('✓ Migration already completed - database schema is up to date');
       db.close();
       process.exit(0);
     }
 
-    console.log('Adding ticket_id column to bookings table...');
+    console.log('Starting migration: Adding ticket_id and making conversation_id nullable...');
 
-    // Add ticket_id column
-    db.run('ALTER TABLE bookings ADD COLUMN ticket_id TEXT', (err) => {
+    // SQLite doesn't support ALTER COLUMN, so we need to recreate the table
+    db.run('BEGIN TRANSACTION', (err) => {
       if (err) {
-        console.error('Error adding ticket_id column:', err);
+        console.error('Error starting transaction:', err);
         process.exit(1);
       }
 
-      console.log('✓ ticket_id column added successfully');
-
-      // Make conversation_id nullable by recreating the constraint
-      console.log('Updating conversation_id to be nullable...');
-
-      // SQLite doesn't support modifying column constraints directly
-      // We need to verify the data is OK
-      db.all('SELECT COUNT(*) as count FROM bookings WHERE conversation_id IS NULL AND ticket_id IS NULL', (err, result) => {
+      // Create new table with correct schema
+      db.run(`
+        CREATE TABLE bookings_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          booking_type_id INTEGER,
+          conversation_id TEXT,
+          ticket_id TEXT,
+          start_time DATETIME NOT NULL,
+          end_time DATETIME NOT NULL,
+          customer_message TEXT,
+          google_event_id TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (booking_type_id) REFERENCES booking_types (id)
+        )
+      `, (err) => {
         if (err) {
-          console.error('Error checking data:', err);
+          console.error('Error creating new table:', err);
+          db.run('ROLLBACK');
           process.exit(1);
         }
 
-        console.log('✓ Migration completed successfully');
-        console.log('  - ticket_id column added');
-        console.log('  - Both conversationId and ticketId can now be used');
+        // Copy existing data
+        db.run(`
+          INSERT INTO bookings_new (id, booking_type_id, conversation_id, ticket_id, start_time, end_time, customer_message, google_event_id, created_at)
+          SELECT id, booking_type_id, conversation_id, NULL, start_time, end_time, customer_message, google_event_id, created_at
+          FROM bookings
+        `, (err) => {
+          if (err) {
+            console.error('Error copying data:', err);
+            db.run('ROLLBACK');
+            process.exit(1);
+          }
 
-        db.close();
-        process.exit(0);
+          // Drop old table
+          db.run('DROP TABLE bookings', (err) => {
+            if (err) {
+              console.error('Error dropping old table:', err);
+              db.run('ROLLBACK');
+              process.exit(1);
+            }
+
+            // Rename new table
+            db.run('ALTER TABLE bookings_new RENAME TO bookings', (err) => {
+              if (err) {
+                console.error('Error renaming table:', err);
+                db.run('ROLLBACK');
+                process.exit(1);
+              }
+
+              // Commit transaction
+              db.run('COMMIT', (err) => {
+                if (err) {
+                  console.error('Error committing transaction:', err);
+                  db.run('ROLLBACK');
+                  process.exit(1);
+                }
+
+                console.log('✓ Migration completed successfully!');
+                console.log('  - ticket_id column added');
+                console.log('  - conversation_id is now nullable');
+                console.log('  - Both conversationId and ticketId can now be used');
+
+                db.close();
+                process.exit(0);
+              });
+            });
+          });
+        });
       });
     });
   });
