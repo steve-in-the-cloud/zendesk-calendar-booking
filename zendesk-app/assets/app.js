@@ -5,6 +5,8 @@ const App = () => {
   const [client, setClient] = useState(null);
   const [apiUrl, setApiUrl] = useState(null);
   const [ticketId, setTicketId] = useState(null);
+  const [requesterEmail, setRequesterEmail] = useState(null);
+  const [existingBookings, setExistingBookings] = useState([]);
   const [bookingTypes, setBookingTypes] = useState([]);
   const [selectedBookingType, setSelectedBookingType] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -23,11 +25,19 @@ const App = () => {
 
     Promise.all([
       zafClient.get('ticket.id'),
+      zafClient.get('ticket.requester.email'),
       zafClient.metadata()
-    ]).then(([ticketData, metadata]) => {
+    ]).then(([ticketData, requesterData, metadata]) => {
+      const email = requesterData['ticket.requester.email'];
       setTicketId(ticketData['ticket.id']);
+      setRequesterEmail(email);
       setApiUrl(metadata.settings.api_url);
+
+      // Load booking types and existing bookings for this email
       loadBookingTypes(metadata.settings.api_url);
+      if (email) {
+        loadExistingBookings(metadata.settings.api_url, email);
+      }
     }).catch(err => {
       setError('Failed to initialize Zendesk app');
       setLoading(false);
@@ -48,6 +58,17 @@ const App = () => {
     } catch (err) {
       setError('Failed to load booking types');
       setLoading(false);
+    }
+  };
+
+  const loadExistingBookings = async (url, email) => {
+    try {
+      const response = await axios.get(`${url}/api/bookings/by-email/${encodeURIComponent(email)}`);
+      setExistingBookings(response.data);
+    } catch (err) {
+      console.error('Failed to load existing bookings:', err);
+      // Don't show error to user, just silently fail
+      setExistingBookings([]);
     }
   };
 
@@ -98,6 +119,7 @@ const App = () => {
       await axios.post(`${apiUrl}/api/bookings`, {
         bookingTypeId: selectedBookingType.id,
         ticketId: ticketId,
+        requesterEmail: requesterEmail,
         startTime: selectedSlot.start,
         endTime: selectedSlot.end
       });
@@ -111,6 +133,11 @@ const App = () => {
       setConfirmedBooking(bookingDetails);
       setSuccess(true);
       setSelectedSlot(null);
+
+      // Reload existing bookings to show the newly created one
+      if (requesterEmail && apiUrl) {
+        loadExistingBookings(apiUrl, requesterEmail);
+      }
 
       if (client) {
         // Show success notification
@@ -185,6 +212,23 @@ const App = () => {
   }
 
   return h('div', null,
+    // Show existing bookings if any
+    existingBookings.length > 0 && h('div', { className: 'existing-bookings' },
+      h('h3', null, 'Your Upcoming Appointments'),
+      h('div', { className: 'bookings-list' },
+        existingBookings.map((booking) =>
+          h('div', { key: booking.id, className: 'booking-item' },
+            h('div', { className: 'booking-type' }, booking.booking_type_name),
+            h('div', { className: 'booking-time' },
+              formatDate(new Date(booking.start_time)),
+              h('br'),
+              `${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}`
+            )
+          )
+        )
+      )
+    ),
+
     h('div', { className: 'form-group' },
       h('label', { htmlFor: 'booking-type' }, 'Select Booking Type'),
       h('select', {

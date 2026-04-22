@@ -177,9 +177,9 @@ app.get('/api/availability', async (req, res) => {
 // Booking endpoint
 app.post('/api/bookings', async (req, res) => {
   try {
-    const { bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage } = req.body;
+    const { bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage, requesterEmail } = req.body;
 
-    console.log('Booking request:', { bookingTypeId, conversationId, ticketId, startTime, endTime });
+    console.log('Booking request:', { bookingTypeId, conversationId, ticketId, startTime, endTime, requesterEmail });
 
     if (!bookingTypeId || (!conversationId && !ticketId) || !startTime || !endTime) {
       console.error('Missing required fields:', { bookingTypeId, conversationId, ticketId, startTime, endTime });
@@ -211,10 +211,10 @@ app.post('/api/bookings', async (req, res) => {
         });
 
         // Save booking to database
-        console.log('Attempting to insert booking:', { bookingTypeId, conversationId, ticketId, googleEventId: googleEvent.id });
+        console.log('Attempting to insert booking:', { bookingTypeId, conversationId, ticketId, requesterEmail, googleEventId: googleEvent.id });
         db.run(
-          'INSERT INTO bookings (booking_type_id, conversation_id, ticket_id, start_time, end_time, customer_message, google_event_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage, googleEvent.id],
+          'INSERT INTO bookings (booking_type_id, conversation_id, ticket_id, start_time, end_time, customer_message, requester_email, google_event_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [bookingTypeId, conversationId, ticketId, startTime, endTime, customerMessage, requesterEmail, googleEvent.id],
           async function(err) {
             if (err) {
               console.error('Database insert error:', err);
@@ -278,6 +278,30 @@ app.get('/api/bookings', (req, res) => {
   `;
 
   db.all(query, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows || []);
+  });
+});
+
+// Get bookings by email - future bookings only
+app.get('/api/bookings/by-email/:email', (req, res) => {
+  const { email } = req.params;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email parameter is required' });
+  }
+
+  const query = `
+    SELECT b.*, bt.name as booking_type_name, bt.description as booking_type_description
+    FROM bookings b
+    LEFT JOIN booking_types bt ON b.booking_type_id = bt.id
+    WHERE b.requester_email = ? AND b.start_time > datetime('now')
+    ORDER BY b.start_time ASC
+  `;
+
+  db.all(query, [email], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }

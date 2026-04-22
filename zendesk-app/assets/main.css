@@ -329,3 +329,44 @@ button {
   color: #68737d;
   margin-bottom: 12px;
 }
+
+/* Existing Bookings Styles */
+.existing-bookings {
+  background-color: #edf8f4;
+  border: 1px solid #03a64a;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.existing-bookings h3 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #0b4c25;
+  font-weight: 600;
+}
+
+.bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.booking-item {
+  background-color: #fff;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #d8dcde;
+}
+
+.booking-item .booking-type {
+  font-weight: 600;
+  color: #2f3941;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.booking-item .booking-time {
+  font-size: 12px;
+  color: #68737d;
+}
