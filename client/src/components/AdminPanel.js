@@ -60,6 +60,22 @@ function AdminPanel() {
     window.location.href = `${baseUrl}/auth/google`;
   };
 
+  const handleDisconnect = async () => {
+    if (!window.confirm('Are you sure you want to disconnect Google Calendar? You will need to reconnect to use the booking system.')) {
+      return;
+    }
+
+    try {
+      await axios.post('/api/admin/disconnect');
+      loadStatus();
+      setCalendars([]);
+      alert('Disconnected from Google Calendar. You can now reconnect.');
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+      alert('Failed to disconnect. Please try again.');
+    }
+  };
+
   const handleCalendarSelect = async (calendarId) => {
     try {
       await axios.post('/api/admin/calendar', { calendarId });
@@ -148,6 +164,10 @@ function AdminPanel() {
                   </select>
                 </div>
               )}
+
+              <button onClick={handleDisconnect} className="btn-secondary" style={{ marginTop: '10px' }}>
+                Disconnect & Reconnect
+              </button>
             </div>
           )}
         </section>

@@ -209,6 +209,34 @@ app.post('/api/admin/calendar', async (req, res) => {
   }
 });
 
+app.post('/api/admin/disconnect', async (req, res) => {
+  try {
+    console.log('Disconnecting Google Calendar...');
+
+    // Clear Google tokens from database
+    await new Promise((resolve, reject) => {
+      db.run(
+        `UPDATE admin_config
+         SET google_refresh_token = NULL,
+             google_access_token = NULL,
+             google_token_expiry = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = 1`,
+        (err) => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+
+    console.log('Google Calendar disconnected successfully');
+    res.json({ success: true, message: 'Disconnected from Google Calendar' });
+  } catch (error) {
+    console.error('Disconnect error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Booking types endpoints
 app.get('/api/booking-types', (req, res) => {
   db.all('SELECT * FROM booking_types WHERE is_active = 1 ORDER BY name', (err, rows) => {
