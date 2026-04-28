@@ -30,6 +30,123 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Detailed health check
+app.get('/api/health/detailed', async (req, res) => {
+  const health = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    checks: {}
+  };
+
+  // Check database
+  try {
+    await new Promise((resolve, reject) => {
+      db.get('SELECT 1', (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    health.checks.database = { status: 'ok', message: 'Database connection successful' };
+  } catch (error) {
+    health.checks.database = { status: 'error', message: error.message };
+    health.status = 'degraded';
+  }
+
+  // Check database tables
+  try {
+    const tables = await new Promise((resolve, reject) => {
+      db.all("SELECT name FROM sqlite_master WHERE type='table'", (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows.map(r => r.name));
+      });
+    });
+    health.checks.tables = {
+      status: 'ok',
+      message: `Found ${tables.length} tables`,
+      tables: tables
+    };
+  } catch (error) {
+    health.checks.tables = { status: 'error', message: error.message };
+    health.status = 'degraded';
+  }
+
+  // Check admin config
+  try {
+    const config = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM admin_config WHERE id = 1', (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+
+    health.checks.adminConfig = {
+      status: config ? 'ok' : 'warning',
+      message: config ? 'Admin config exists' : 'No admin config found',
+      hasGoogleToken: !!config?.google_refresh_token,
+      hasCalendarId: !!config?.calendar_id,
+      calendarId: config?.calendar_id || 'not set'
+    };
+
+    if (!config) health.status = 'degraded';
+  } catch (error) {
+    health.checks.adminConfig = { status: 'error', message: error.message };
+    health.status = 'degraded';
+  }
+
+  // Check Google Calendar authentication
+  try {
+    const isAuthenticated = await googleCalendar.loadCredentials();
+    health.checks.googleAuth = {
+      status: isAuthenticated ? 'ok' : 'warning',
+      message: isAuthenticated ? 'Google Calendar authenticated' : 'Google Calendar not authenticated'
+    };
+
+    if (!isAuthenticated) health.status = 'degraded';
+  } catch (error) {
+    health.checks.googleAuth = { status: 'error', message: error.message };
+    health.status = 'degraded';
+  }
+
+  // Check environment variables
+  const requiredEnvVars = [
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_REDIRECT_URI'
+  ];
+
+  const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
+  health.checks.environment = {
+    status: missingEnvVars.length === 0 ? 'ok' : 'error',
+    message: missingEnvVars.length === 0
+      ? 'All required environment variables set'
+      : `Missing: ${missingEnvVars.join(', ')}`,
+    missingVars: missingEnvVars
+  };
+
+  if (missingEnvVars.length > 0) health.status = 'error';
+
+  // Check booking types
+  try {
+    const bookingTypes = await new Promise((resolve, reject) => {
+      db.all('SELECT COUNT(*) as count FROM booking_types WHERE is_active = 1', (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows[0].count);
+      });
+    });
+
+    health.checks.bookingTypes = {
+      status: bookingTypes > 0 ? 'ok' : 'warning',
+      message: `${bookingTypes} active booking types`,
+      count: bookingTypes
+    };
+  } catch (error) {
+    health.checks.bookingTypes = { status: 'error', message: error.message };
+  }
+
+  res.json(health);
+});
+
 // Google OAuth routes
 app.get('/auth/google', (req, res) => {
   const authUrl = googleCalendar.getAuthUrl();
@@ -156,9 +273,13 @@ app.delete('/api/booking-types/:id', (req, res) => {
 // Availability endpoint
 app.get('/api/availability', async (req, res) => {
   try {
+    console.log('\n=== Availability Request ===');
+    console.log('Query params:', req.query);
+
     const { start, end, duration } = req.query;
 
     if (!start || !end || !duration) {
+      console.error('Missing required parameters:', { start, end, duration });
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
@@ -166,11 +287,29 @@ app.get('/api/availability', async (req, res) => {
     const endDate = new Date(end);
     const durationMinutes = parseInt(duration);
 
+    console.log('Parsed dates:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      durationMinutes,
+      isValidStart: !isNaN(startDate.getTime()),
+      isValidEnd: !isNaN(endDate.getTime())
+    });
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.error('Invalid date format');
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
+
     const slots = await googleCalendar.getAvailableSlots(startDate, endDate, durationMinutes);
+    console.log(`Returning ${slots.length} slots to client`);
     res.json(slots);
   } catch (error) {
     console.error('Availability error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

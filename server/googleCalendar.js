@@ -62,58 +62,74 @@ class GoogleCalendarService {
   }
 
   async getAvailableSlots(startDate, endDate, durationMinutes) {
-    await this.loadCredentials();
+    try {
+      console.log('=== Getting Available Slots ===');
+      console.log('Request:', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        durationMinutes
+      });
 
-    const calendarId = await this.getCalendarId();
-    if (!calendarId) {
-      throw new Error('Calendar not configured');
+      await this.loadCredentials();
+
+      const calendarId = await this.getCalendarId();
+      console.log('Calendar ID:', calendarId);
+
+      if (!calendarId) {
+        throw new Error('Calendar not configured');
+      }
+
+      const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+
+      // Get events from Google Calendar
+      console.log('Fetching Google Calendar events...');
+      const response = await calendar.events.list({
+        calendarId: calendarId,
+        timeMin: startDate.toISOString(),
+        timeMax: endDate.toISOString(),
+        singleEvents: true,
+        orderBy: 'startTime'
+      });
+
+      const calendarEvents = response.data.items || [];
+      console.log(`Found ${calendarEvents.length} calendar events`);
+
+      // Get bookings from database in the same time range
+      console.log('Fetching database bookings...');
+      const dbBookings = await new Promise((resolve, reject) => {
+        db.all(
+          `SELECT start_time, end_time FROM bookings
+           WHERE start_time < ? AND end_time > ?`,
+          [endDate.toISOString(), startDate.toISOString()],
+          (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          }
+        );
+      });
+
+      console.log('Database bookings:', {
+        count: dbBookings.length,
+        bookings: dbBookings
+      });
+
+      // Convert database bookings to event format
+      const bookingEvents = dbBookings.map(booking => ({
+        start: { dateTime: booking.start_time },
+        end: { dateTime: booking.end_time }
+      }));
+
+      // Combine both calendar events and database bookings
+      const allBusySlots = [...calendarEvents, ...bookingEvents];
+      console.log(`Total busy slots: ${allBusySlots.length}`);
+
+      const slots = this.calculateAvailableSlots(startDate, endDate, allBusySlots, durationMinutes);
+      console.log('=== Returning slots ===', { count: slots.length });
+      return slots;
+    } catch (error) {
+      console.error('Error in getAvailableSlots:', error);
+      throw error;
     }
-
-    const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
-
-    // Get events from Google Calendar
-    const response = await calendar.events.list({
-      calendarId: calendarId,
-      timeMin: startDate.toISOString(),
-      timeMax: endDate.toISOString(),
-      singleEvents: true,
-      orderBy: 'startTime'
-    });
-
-    const calendarEvents = response.data.items || [];
-
-    // Get bookings from database in the same time range
-    const dbBookings = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT start_time, end_time FROM bookings
-         WHERE start_time < ? AND end_time > ?`,
-        [endDate.toISOString(), startDate.toISOString()],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
-
-    console.log('Availability check:', {
-      range: { start: startDate.toISOString(), end: endDate.toISOString() },
-      calendarEventsCount: calendarEvents.length,
-      dbBookingsCount: dbBookings.length,
-      dbBookings: dbBookings
-    });
-
-    // Convert database bookings to event format
-    const bookingEvents = dbBookings.map(booking => ({
-      start: { dateTime: booking.start_time },
-      end: { dateTime: booking.end_time }
-    }));
-
-    // Combine both calendar events and database bookings
-    const allBusySlots = [...calendarEvents, ...bookingEvents];
-
-    console.log('Total busy slots:', allBusySlots.length);
-
-    return this.calculateAvailableSlots(startDate, endDate, allBusySlots, durationMinutes);
   }
 
   calculateAvailableSlots(startDate, endDate, busyEvents, durationMinutes) {
@@ -121,17 +137,26 @@ class GoogleCalendarService {
     const workingHoursStart = 9; // 9 AM
     const workingHoursEnd = 17; // 5 PM
 
+    // Use UTC to avoid timezone issues
     let currentDate = new Date(startDate);
-    currentDate.setHours(workingHoursStart, 0, 0, 0);
+    currentDate.setUTCHours(workingHoursStart, 0, 0, 0);
+
+    console.log('Calculating slots:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      busyEventsCount: busyEvents.length,
+      durationMinutes
+    });
 
     while (currentDate < endDate) {
-      // Skip weekends
-      if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+      // Skip weekends (use UTC day)
+      const dayOfWeek = currentDate.getUTCDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         let slotStart = new Date(currentDate);
-        slotStart.setHours(workingHoursStart, 0, 0, 0);
+        slotStart.setUTCHours(workingHoursStart, 0, 0, 0);
 
         const dayEnd = new Date(currentDate);
-        dayEnd.setHours(workingHoursEnd, 0, 0, 0);
+        dayEnd.setUTCHours(workingHoursEnd, 0, 0, 0);
 
         while (slotStart.getTime() + durationMinutes * 60000 <= dayEnd.getTime()) {
           const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
@@ -154,11 +179,12 @@ class GoogleCalendarService {
         }
       }
 
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-      currentDate.setHours(workingHoursStart, 0, 0, 0);
+      // Move to next day (UTC)
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+      currentDate.setUTCHours(workingHoursStart, 0, 0, 0);
     }
 
+    console.log(`Generated ${slots.length} available slots`);
     return slots;
   }
 
